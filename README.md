@@ -1,86 +1,21 @@
 # Treatment Scheme Organizer
 
-## Value Objects
+This project adheres to [Semantic Versioning](http://semver.org/)
+and [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0-beta.2/).
 
-- DateTime
+## DB Models
 
-```
-Format: timestamp
-```
+### Drug
 
-- Email
-
-```
-Format: email
-```
-
-- FrequencySettings
+Fields:
 
 ```
-Format: * * *
-
-Examples:
-3 * * - 3 times a day, every day, every week
-1 1 * - once a week, every week  
-1 1 1 - once all time 
+- title (100 | varchar)
 ```
 
-## Domain Models
-
-- Account
+Actions:
 
 ```
-1. Creating through a cli command
-2. Signing in through a telegram bot
-```
-
-- Illness
-
-```
-1. Creating through a cli command
+1. Creating new items
 2. Getting list
-```
-
-- Procedure
-
-```
-1. Creating through a cli command
-2. Getting list
-```
-
-- Drug
-
-```
-1. Creating through a cli command
-2. Getting list
-```
-
-- Scheme
-
-```
-```
-
-- TreatmentScheme
-
-```
-```
-
-- Treatment
-
-```
-```
-
-- Schedule
-
-```
-```
-
-- Notification
-
-```
-```
-
-- MedicationSchedule
-
-```
 ```
