@@ -1,10 +1,11 @@
-package configs
+package config
 
 import (
 	"fmt"
-	"github.com/joho/godotenv"
 	"log"
 	"os"
+
+	"github.com/joho/godotenv"
 
 	"github.com/kelseyhightower/envconfig"
 )
@@ -20,8 +21,8 @@ var Env struct {
 	}
 	API struct {
 		Request struct {
-			PerPage uint `default:"20" envconfig:"API_REQUEST_PER_PAGE"`
-			Page    uint `default:"1" envconfig:"API_REQUEST_PAGE"`
+			Limit  int `default:"20" envconfig:"API_REQUEST_LIMIT"`
+			Offset int `default:"1" envconfig:"API_REQUEST_OFFSET"`
 		}
 	}
 	Server struct {
