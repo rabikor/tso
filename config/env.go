@@ -1,10 +1,11 @@
-package configs
+package config
 
 import (
 	"fmt"
-	"github.com/joho/godotenv"
 	"log"
 	"os"
+
+	"github.com/joho/godotenv"
 
 	"github.com/kelseyhightower/envconfig"
 )
