@@ -21,8 +21,8 @@ var Env struct {
 	}
 	API struct {
 		Request struct {
-			Limit  int `default:"20" envconfig:"API_REQUEST_LIMIT"`
-			Offset int `default:"1" envconfig:"API_REQUEST_OFFSET"`
+			Limit int `default:"20" envconfig:"API_REQUEST_LIMIT"`
+			Page  int `default:"1" envconfig:"API_REQUEST_OFFSET"`
 		}
 	}
 	Server struct {
