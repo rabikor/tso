@@ -3,14 +3,14 @@ package database
 import (
 	"fmt"
 
-	"gorm.io/driver/mysql"
-	"gorm.io/gorm"
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/jmoiron/sqlx"
 
 	"treatment-scheme-organizer/config"
 )
 
 type DB struct {
-	*gorm.DB
+	*sqlx.DB
 	Drugs drugsRepository
 }
 
@@ -24,16 +24,13 @@ func Open() (*DB, error) {
 		config.Env.DB.Name,
 	)
 
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	db, err := sqlx.Open("mysql", dsn)
+
 	if err != nil {
 		return nil, err
 	}
 
-	dbb, err := db.DB()
-	if err != nil {
-		return nil, err
-	}
-	if err := dbb.Ping(); err != nil {
+	if err := db.Ping(); err != nil {
 		return nil, err
 	}
 

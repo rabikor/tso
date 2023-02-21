@@ -1,21 +1,39 @@
 package database
 
-import "gorm.io/gorm"
+import (
+	"fmt"
+
+	"github.com/jmoiron/sqlx"
+)
 
 type (
 	drugsRepository interface {
-		GetAll(limit, page int) ([]Drug, error)
+		GetAll(limit, offset int) ([]Drug, error)
+		Add(drg *Drug) error
 	}
 	drugsTable struct {
-		*gorm.DB
+		*sqlx.DB
 	}
 )
 
 type Drug struct {
-	ID    uint   `gorm:"primarykey" json:"id"`
-	Title string `gorm:"type:varchar(100); not null; unique_index" json:"title"`
+	ID    uint   `json:"id"`
+	Title string `json:"title"`
 }
 
 func (db *drugsTable) GetAll(limit, offset int) (ds []Drug, _ error) {
-	return ds, db.Find(&ds).Limit(limit).Offset(offset).Error
+	err := db.Select(&ds, fmt.Sprintf("SELECT * FROM drugs LIMIT %d OFFSET %d", limit, offset))
+	if err != nil {
+		return nil, err
+	}
+
+	return ds, nil
+}
+
+func (db *drugsTable) Add(drg *Drug) error {
+	if _, err := db.Exec("INSERT INTO drugs (title) VALUES (?)", drg.Title); err != nil {
+		return err
+	}
+
+	return nil
 }
