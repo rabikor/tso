@@ -1,8 +1,8 @@
 package server
 
 type Pagination struct {
-	Limit int `query:"limit" param:"limit"`
-	Page  int `query:"page" param:"page"`
+	Limit int `query:"limit" param:"limit" json:"limit"`
+	Page  int `query:"page" param:"page" json:"page"`
 }
 
 func (p Pagination) GetOffset() int {

@@ -9,6 +9,7 @@ import (
 type (
 	drugsRepository interface {
 		GetAll(limit, offset int) ([]Drug, error)
+		GetById(id uint) (*Drug, error)
 		Add(drg *Drug) error
 	}
 	drugsTable struct {
@@ -30,9 +31,21 @@ func (db *drugsTable) GetAll(limit, offset int) (ds []Drug, _ error) {
 	return ds, nil
 }
 
+func (db *drugsTable) GetById(id uint) (drug *Drug, err error) {
+	drug = new(Drug)
+	if err = db.Get(drug, "SELECT * FROM drugs WHERE id = ?", id); err != nil {
+		return
+	}
+
+	return
+}
+
 func (db *drugsTable) Add(drg *Drug) error {
-	if _, err := db.Exec("INSERT INTO drugs (title) VALUES (?)", drg.Title); err != nil {
+	if result, err := db.Exec("INSERT INTO drugs (title) VALUES (?)", drg.Title); err != nil {
 		return err
+	} else {
+		lastId, _ := result.LastInsertId()
+		drg.ID = uint(lastId)
 	}
 
 	return nil

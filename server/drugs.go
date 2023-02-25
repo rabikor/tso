@@ -10,11 +10,12 @@ import (
 )
 
 type DrugHandler struct {
-	db *database.DB
+	env *config.Env
+	db  *database.DB
 }
 
-func NewDrugsHandler(db *database.DB) DrugHandler {
-	return DrugHandler{db: db}
+func NewDrugsHandler(env *config.Env, db *database.DB) DrugHandler {
+	return DrugHandler{env: env, db: db}
 }
 
 func (dh DrugHandler) AddRoutes(rg *echo.Group) {
@@ -24,7 +25,7 @@ func (dh DrugHandler) AddRoutes(rg *echo.Group) {
 }
 
 func (dh DrugHandler) GetAll(c echo.Context) error {
-	p := Pagination{Limit: config.Env.API.Request.Limit, Page: config.Env.API.Request.Page}
+	p := Pagination{Limit: dh.env.API.Request.Limit, Page: dh.env.API.Request.Page}
 
 	if err := c.Bind(&p); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
@@ -36,7 +37,7 @@ func (dh DrugHandler) GetAll(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	return c.JSON(http.StatusOK, echo.Map{"status": true, "data": drugs})
+	return c.JSON(http.StatusOK, echo.Map{"status": true, "data": drugs, "meta": p})
 }
 
 type createDrugRequest struct {
@@ -55,5 +56,5 @@ func (dh DrugHandler) Create(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "slug": "drug.create.service-request"})
 	}
 
-	return c.JSON(http.StatusOK, echo.Map{"status": true, "data": drug})
+	return c.JSON(http.StatusCreated, echo.Map{"status": true})
 }

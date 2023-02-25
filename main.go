@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 
 	"treatment-scheme-organizer/config"
@@ -13,20 +12,39 @@ import (
 )
 
 func main() {
-	db, err := database.Open()
-	if err != nil {
-		log.Fatal(err)
+	srv := echo.New()
+
+	env := &config.Env{}
+	if err := env.ParseEnv("./.env"); err != nil {
+		srv.Logger.Fatal(err)
 	}
 
-	srv := echo.New()
+	db, err := database.Open(env)
+	if err != nil {
+		srv.Logger.Fatal(err)
+	}
+	defer db.Close()
+
 	rtr := srv.Group("/api")
 
 	rtr.GET("/ping", func(ctx echo.Context) error {
 		return ctx.JSON(http.StatusOK, echo.Map{"status": true, "message": "pong"})
 	})
 
-	drugs := server.NewDrugsHandler(db)
+	drugs := server.NewDrugsHandler(env, db)
 	drugs.AddRoutes(rtr)
 
-	srv.Logger.Fatal(srv.Start(fmt.Sprintf(":%d", config.Env.Server.Port)))
+	illnesses := server.NewIllnessesHandler(env, db)
+	illnesses.AddRoutes(rtr)
+
+	procedures := server.NewProceduresHandler(env, db)
+	procedures.AddRoutes(rtr)
+
+	schemes := server.NewSchemesHandler(env, db)
+	schemes.AddRoutes(rtr)
+
+	schemeDays := server.NewSchemeDaysHandler(env, db)
+	schemeDays.AddRoutes(rtr)
+
+	srv.Logger.Fatal(srv.Start(fmt.Sprintf(":%d", env.Server.Port)))
 }

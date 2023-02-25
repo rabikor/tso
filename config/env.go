@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -10,7 +9,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 )
 
-var Env struct {
+type Env struct {
 	Mode string `default:"debug" envconfig:"APP_ENV"`
 	DB   struct {
 		Host     string `default:"localhost" envconfig:"DB_HOST"`
@@ -30,7 +29,7 @@ var Env struct {
 	}
 }
 
-func fileExists(path string) bool {
+func isFileExists(path string) bool {
 	if f, err := os.Stat(path); os.IsNotExist(err) || f.IsDir() {
 		return false
 	}
@@ -38,25 +37,18 @@ func fileExists(path string) bool {
 	return true
 }
 
-func init() {
-	dotenvPath := "./.env"
-
-	if dotenvPathEnv := os.Getenv("DOTENV_PATH"); dotenvPathEnv != "" {
-		dotenvPath = dotenvPathEnv
-	}
-
-	if !fileExists(dotenvPath) {
-		log.Panic(fmt.Sprintf("file [%s] with env vars was not found", dotenvPath))
-		return
+func (env *Env) ParseEnv(dotenvPath string) error {
+	if !isFileExists(dotenvPath) {
+		return fmt.Errorf("file [%s] with env vars was not found", dotenvPath)
 	}
 
 	if err := godotenv.Load(dotenvPath); err != nil {
-		log.Panic(err)
-		return
+		return err
 	}
 
-	if err := envconfig.Process("", &Env); err != nil {
-		log.Panic(err)
-		return
+	if err := envconfig.Process("", env); err != nil {
+		return err
 	}
+
+	return nil
 }

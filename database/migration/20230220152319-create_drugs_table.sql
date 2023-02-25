@@ -1,8 +1,9 @@
 -- +migrate Up
-CREATE TABLE IF NOT EXISTS drugs (
-    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS drugs
+(
+    id    INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     title VARCHAR(100) NOT NULL
-) engine=InnoDB;
+) engine = InnoDB;
 
 -- +migrate Down
 DROP TABLE IF EXISTS drugs;
