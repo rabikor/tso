@@ -40,19 +40,15 @@ func (ph ProcedureHandler) GetAll(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{"status": true, "data": procedures, "meta": p})
 }
 
-type createProcedureRequest struct {
-	Title string `json:"title" binding:"required"`
-}
-
 func (ph ProcedureHandler) Create(c echo.Context) error {
 	var req createProcedureRequest
 
-	if err := c.Bind(&req); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "slug": "procedure.create.bind-json", "error": err})
+	p := &database.Procedure{}
+	if err := req.bind(c, p); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "slug": "procedure.create.bind-json", "error": err.Error()})
 	}
 
-	procedure := database.Procedure{Title: req.Title}
-	if err := ph.db.Procedures.Add(&procedure); err != nil {
+	if err := ph.db.Procedures.Add(p); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "slug": "procedure.create.service-request"})
 	}
 

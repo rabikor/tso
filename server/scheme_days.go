@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -43,48 +44,54 @@ func (dh SchemeDayHandler) GetByScheme(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{"status": true, "data": schemeDays, "meta": p})
 }
 
-type createSchemeDayRequest struct {
-	DrugID      uint `json:"drugId"`
-	ProcedureID uint `json:"procedureId"`
-	DayNumber   uint `json:"dayNumber"`
-	Times       uint `json:"times"`
-	EachHours   uint `json:"eachHours"`
+// ValidateSchemeDay todo: refactor
+func ValidateSchemeDay(sd *database.SchemeDay) error {
+	if sd.Order > sd.Scheme.Length {
+		return fmt.Errorf("you cannot create day with order higher than length of scheme")
+	}
+
+	if sd.Times*sd.Frequency > 24 {
+		return fmt.Errorf("you cannot create scheme day with count of medications higher length of the day")
+	}
+
+	return nil
 }
 
 func (dh SchemeDayHandler) CreateForScheme(c echo.Context) error {
 	var req createSchemeDayRequest
 
-	if err := c.Bind(&req); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "slug": "scheme.day.create.bind-json", "error": err})
-	}
-
-	drug, err := dh.db.Drugs.GetById(req.DrugID)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "slug": "scheme.day.create.not-found-drug", "error": err.Error()})
-	}
-
-	procedure, err := dh.db.Procedures.GetById(req.ProcedureID)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "slug": "scheme.day.create.not-found-procedure", "error": err.Error()})
-	}
+	sd := &database.SchemeDay{}
 
 	schemeID, _ := strconv.Atoi(c.Param("schemeID"))
 
-	scheme, err := dh.db.Schemes.GetById(uint(schemeID))
+	if err := req.bind(c, sd); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "slug": "scheme.day.create.bind-json", "error": err.Error()})
+	}
+
+	s, err := dh.db.Schemes.GetById(uint(schemeID))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "slug": "scheme.day.create.not-found-illness", "error": err.Error()})
 	}
+	sd.Scheme = *s
 
-	schemeDay := database.SchemeDay{
-		DayNumber: req.DayNumber,
-		Times:     req.Times,
-		EachHours: req.EachHours,
-		Drug:      *drug,
-		Procedure: *procedure,
-		Scheme:    *scheme,
+	if err := ValidateSchemeDay(sd); err != nil {
+		return echo.NewHTTPError(http.StatusConflict, echo.Map{"status": false, "slug": "scheme.day.create.validation", "error": err.Error()})
 	}
-	if err := dh.db.SchemeDays.Add(&schemeDay); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "slug": "scheme.day.create.service-request"})
+
+	d, err := dh.db.Drugs.GetById(req.SchemeDay.DrugID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "slug": "scheme.day.create.not-found-drug", "error": err.Error()})
+	}
+	sd.Drug = *d
+
+	p, err := dh.db.Procedures.GetById(req.SchemeDay.ProcedureID)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "slug": "scheme.day.create.not-found-procedure", "error": err.Error()})
+	}
+	sd.Procedure = *p
+
+	if err := dh.db.SchemeDays.Add(sd); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "slug": "scheme.day.create.service-request", "error": err.Error()})
 	}
 
 	return c.JSON(http.StatusCreated, echo.Map{"status": true})

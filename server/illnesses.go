@@ -40,19 +40,16 @@ func (ih IllnessHandler) GetAll(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{"status": true, "data": illnesses, "meta": p})
 }
 
-type createIllnessRequest struct {
-	Title string `json:"title"`
-}
-
 func (ih IllnessHandler) Create(c echo.Context) error {
 	var req createIllnessRequest
 
-	if err := c.Bind(&req); err != nil {
+	i := &database.Illness{}
+
+	if err := req.bind(c, i); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "slug": "illness.create.bind-json", "error": err.Error()})
 	}
 
-	illness := &database.Illness{Title: req.Title}
-	if err := ih.db.Illnesses.Add(illness); err != nil {
+	if err := ih.db.Illnesses.Add(i); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "slug": "illness.create.service-request"})
 	}
 

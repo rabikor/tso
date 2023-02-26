@@ -40,19 +40,16 @@ func (dh DrugHandler) GetAll(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{"status": true, "data": drugs, "meta": p})
 }
 
-type createDrugRequest struct {
-	Title string `json:"title" binding:"required"`
-}
-
 func (dh DrugHandler) Create(c echo.Context) error {
 	var req createDrugRequest
 
-	if err := c.Bind(&req); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "slug": "drug.create.bind-json", "error": err})
+	drug := &database.Drug{}
+
+	if err := req.bind(c, drug); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "slug": "drug.create.bind-json", "error": err.Error()})
 	}
 
-	drug := database.Drug{Title: req.Title}
-	if err := dh.db.Drugs.Add(&drug); err != nil {
+	if err := dh.db.Drugs.Add(drug); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "slug": "drug.create.service-request"})
 	}
 
