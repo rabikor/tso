@@ -8,7 +8,7 @@ type (
 	schemesRepository interface {
 		GetById(id uint) (scheme *Scheme, err error)
 		GetByIllness(illnessID, limit, offset int) ([]Scheme, error)
-		Add(scheme *Scheme) error
+		Add(illnessID, length uint, days []SchemeDay) error
 	}
 	schemesTable struct {
 		*sqlx.DB
@@ -57,42 +57,38 @@ func (db *schemesTable) GetById(id uint) (s *Scheme, err error) {
 	return
 }
 
-func (db *schemesTable) Add(s *Scheme) error {
-	var q string
-	q = "INSERT INTO schemes (illness_id, length) VALUES (?, ?)"
-
+func (db *schemesTable) Add(illnessID, length uint, days []SchemeDay) error {
+	const (
+		qScheme = "INSERT INTO schemes (illness_id, length) VALUES (?, ?)"
+		qDays   = "INSERT INTO scheme_days (scheme_id, procedure_id, drug_id, `order`, times, frequency) VALUES (?, ?, ?, ?, ?, ?)"
+	)
+	
 	tx, err := db.Begin()
 	if err != nil {
 		return err
 	}
+	
+	defer func() {
+		if err != nil {
+			if err := tx.Rollback(); err != nil {
+				// TODO: log the rollback error
+			}
+		}
+	}()
 
-	if s.IllnessID == 0 && s.Illness.ID > 0 {
-		s.IllnessID = s.Illness.ID
-	}
-
-	if res, err := tx.Exec(q, s.IllnessID, s.Length); err != nil {
-		tx.Rollback()
+	var result *sqlx.Result
+	result, err = tx.Exec(qScheme, illnessID, length)
+	if err != nil {
 		return err
-	} else {
-		lastId, _ := res.LastInsertId()
-		s.ID = uint(lastId)
 	}
-
-	q = "INSERT INTO scheme_days (scheme_id, procedure_id, drug_id, `order`, times, frequency) VALUES (?, ?, ?, ?, ?, ?)"
-
-	for _, sd := range s.Days {
-		if res, err := tx.Exec(q, s.ID, sd.ProcedureID, sd.DrugID, sd.Order, sd.Times, sd.Frequency); err != nil {
-			tx.Rollback()
+	
+	lastID, _ := result.LastInsertId()
+	for _, sd := range days {
+		_, err = tx.Exec(qDays, lastID, sd.ProcedureID, sd.DrugID, sd.Order, sd.Times, sd.Frequency)
+		if err != nil {
 			return err
-		} else {
-			lastId, _ := res.LastInsertId()
-			sd.ID = uint(lastId)
 		}
 	}
 
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-
-	return nil
+	return tx.Commit()
 }
