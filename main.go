@@ -14,7 +14,7 @@ import (
 
 func main() {
 	e := echo.New()
-	e.HTTPErrorHandler = server.NewErrorHandler
+	server.NewErrorHandler(e)
 	server.NewRouter(e)
 
 	env, err := config.NewEnv("./.env")

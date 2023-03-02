@@ -34,7 +34,7 @@ func NewRouter(e *echo.Echo) {
 	e.Validator = NewValidator()
 }
 
-func NewErrorHandler(err error, c echo.Context) {
+func ErrorHandler(err error, c echo.Context) {
 	code := http.StatusInternalServerError
 	if he, ok := err.(*echo.HTTPError); ok {
 		code = he.Code
@@ -47,4 +47,8 @@ func NewErrorHandler(err error, c echo.Context) {
 			c.Logger().Error(err)
 		}
 	}
+}
+
+func NewErrorHandler(e *echo.Echo) {
+	e.HTTPErrorHandler = ErrorHandler
 }
