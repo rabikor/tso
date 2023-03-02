@@ -5,6 +5,6 @@ type Pagination struct {
 	Page  int `query:"page" param:"page" json:"page"`
 }
 
-func (p Pagination) GetOffset() int {
+func (p Pagination) Offset() int {
 	return (p.Page - 1) * p.Limit
 }

@@ -11,23 +11,23 @@ import (
 )
 
 type SchemeHandler struct {
-	env *config.Env
+	env config.Env
 	db  *database.DB
 }
 
-func NewSchemesHandler(env *config.Env, db *database.DB) SchemeHandler {
+func NewSchemesHandler(env config.Env, db *database.DB) SchemeHandler {
 	return SchemeHandler{env: env, db: db}
 }
 
 func (dh SchemeHandler) AddRoutes(rtr *echo.Group) {
 	illnessGroup := rtr.Group("/illnesses")
-	illnessGroup.GET("/:illnessID/schemes", dh.GetByIllness)
+	illnessGroup.GET("/:illnessID/schemes", dh.ByIllness)
 
 	schemeGroup := rtr.Group("/schemes")
 	schemeGroup.POST("", dh.Create)
 }
 
-func (dh SchemeHandler) GetByIllness(c echo.Context) error {
+func (dh SchemeHandler) ByIllness(c echo.Context) error {
 	p := Pagination{Limit: dh.env.API.Request.Limit, Page: dh.env.API.Request.Page}
 
 	if err := c.Bind(&p); err != nil {
@@ -36,7 +36,7 @@ func (dh SchemeHandler) GetByIllness(c echo.Context) error {
 
 	illnessID, _ := strconv.Atoi(c.Param("illnessID"))
 
-	schemes, err := dh.db.Schemes.GetByIllness(illnessID, p.Limit, p.GetOffset())
+	schemes, err := dh.db.Schemes.ByIllness(illnessID, p.Limit, p.Offset())
 
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
@@ -45,31 +45,67 @@ func (dh SchemeHandler) GetByIllness(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{"status": true, "data": schemes, "meta": p})
 }
 
-func (dh SchemeHandler) Create(c echo.Context) error {
-	var req createSchemeRequest
+type createSchemeRequest struct {
+	Scheme struct {
+		IllnessID uint `json:"illness" validate:"required"`
+		Length    uint `json:"length" validate:"required"`
+	} `json:"scheme" validate:"required"`
+	Days []SchemeDayData `json:"days" validate:"dive,required"`
+}
 
-	s := &database.Scheme{}
-
-	if err := req.bind(c, s); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "slug": "scheme.create.bind-json", "error": err.Error()})
+func (r createSchemeRequest) Bind(c echo.Context, s *database.Scheme) error {
+	if err := c.Bind(r); err != nil {
+		return err
 	}
 
-	for _, sd := range s.Days {
-		if err := ValidateSchemeDay(&sd); err != nil {
-			return echo.NewHTTPError(http.StatusConflict, echo.Map{"status": false, "slug": "scheme.create.day-validation", "error": err.Error()})
+	if err := c.Validate(r); err != nil {
+		return err
+	}
+
+	s.IllnessID = r.Scheme.IllnessID
+	s.Length = r.Scheme.Length
+
+	for _, sd := range r.Days {
+		s.Days = append(
+			s.Days,
+			database.SchemeDay{
+				Scheme:      *s,
+				SchemeID:    s.ID,
+				ProcedureID: sd.ProcedureID,
+				DrugID:      sd.DrugID,
+				Order:       sd.Order,
+				Times:       sd.Times,
+				Frequency:   sd.Frequency,
+			},
+		)
+	}
+
+	return nil
+}
+
+func (dh SchemeHandler) Create(c echo.Context) error {
+	var (
+		r createSchemeRequest
+		s database.Scheme
+	)
+
+	if err := r.Bind(c, &s); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "error": err.Error()})
+	}
+
+	for _, sd := range r.Days {
+		if err := sd.Validate(s); err != nil {
+			return echo.NewHTTPError(http.StatusConflict, echo.Map{"status": false, "error": err.Error()})
 		}
 	}
 
-	i, err := dh.db.Illnesses.GetById(req.Scheme.IllnessID)
-
+	_, err := dh.db.Illnesses.ByID(r.Scheme.IllnessID)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "slug": "scheme.create.not-found-illness", "error": err.Error()})
+		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "error": err.Error()})
 	}
 
-	s.Illness = *i
-
-	if err := dh.db.Schemes.Add(s); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "slug": "scheme.create.service-request"})
+	if _, err := dh.db.Schemes.Add(s); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "error": err.Error()})
 	}
 
 	return c.JSON(http.StatusCreated, echo.Map{"status": true})
