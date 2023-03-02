@@ -1,21 +1,9 @@
 # Treatment Scheme Organizer
 
 This project adheres to [Semantic Versioning](http://semver.org/)
-and [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0-beta.2/).
+and [Conventional Commits](https://go.dev/doc/contribute#commit_messages).
 
-## DB Models
-
-### Drug
-
-Fields:
-
-```
-- title (100 | varchar)
-```
-
-Actions:
-
-```
-1. Creating new items
-2. Getting list
-```
+Used packages:
+- Migrations: [goose](https://github.com/pressly/goose)
+- Database: [sqlx](https://jmoiron.github.io/sqlx/)
+- Framework: [echo](https://echo.labstack.com/)
