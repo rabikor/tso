@@ -18,19 +18,19 @@ func NewIllnessesHandler(env config.Env, db *database.DB) IllnessHandler {
 	return IllnessHandler{env: env, db: db}
 }
 
-func (ih IllnessHandler) AddRoutes(rg *echo.Group) {
+func (h IllnessHandler) AddRoutes(rg *echo.Group) {
 	router := rg.Group("/illnesses")
-	router.GET("", ih.All)
-	router.POST("", ih.Create)
+	router.GET("", h.All)
+	router.POST("", h.Create)
 }
 
-func (ih IllnessHandler) All(c echo.Context) error {
-	p := Pagination{Limit: ih.env.API.Request.Limit, Page: ih.env.API.Request.Page}
+func (h IllnessHandler) All(c echo.Context) error {
+	p := NewPagination(h.env)
 	if err := c.Bind(&p); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	illnesses, err := ih.db.Illnesses.All(p.Limit, p.Offset())
+	illnesses, err := h.db.Illnesses.All(p.Limit, p.Offset())
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
@@ -58,7 +58,7 @@ func (r createIllnessRequest) Bind(c echo.Context, i *database.Illness) error {
 	return nil
 }
 
-func (ih IllnessHandler) Create(c echo.Context) error {
+func (h IllnessHandler) Create(c echo.Context) error {
 	var (
 		req createIllnessRequest
 		i   database.Illness
@@ -68,7 +68,7 @@ func (ih IllnessHandler) Create(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
-	if _, err := ih.db.Illnesses.Add(i); err != nil {
+	if _, err := h.db.Illnesses.Add(i); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 

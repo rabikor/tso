@@ -18,19 +18,19 @@ func NewDrugsHandler(env config.Env, db *database.DB) DrugHandler {
 	return DrugHandler{env: env, db: db}
 }
 
-func (dh DrugHandler) AddRoutes(rg *echo.Group) {
+func (h DrugHandler) AddRoutes(rg *echo.Group) {
 	router := rg.Group("/drugs")
-	router.GET("", dh.All)
-	router.POST("", dh.Create)
+	router.GET("", h.All)
+	router.POST("", h.Create)
 }
 
-func (dh DrugHandler) All(c echo.Context) error {
-	p := Pagination{Limit: dh.env.API.Request.Limit, Page: dh.env.API.Request.Page}
+func (h DrugHandler) All(c echo.Context) error {
+	p := NewPagination(h.env)
 	if err := c.Bind(&p); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
-	drugs, err := dh.db.Drugs.All(p.Limit, p.Offset())
+	drugs, err := h.db.Drugs.All(p.Limit, p.Offset())
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
@@ -58,7 +58,7 @@ func (r createDrugRequest) Bind(c echo.Context, d *database.Drug) error {
 	return nil
 }
 
-func (dh DrugHandler) Create(c echo.Context) error {
+func (h DrugHandler) Create(c echo.Context) error {
 	var (
 		r createDrugRequest
 		d database.Drug
@@ -68,7 +68,7 @@ func (dh DrugHandler) Create(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
-	if _, err := dh.db.Drugs.Add(d); err != nil {
+	if _, err := h.db.Drugs.Add(d); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
