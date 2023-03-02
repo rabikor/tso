@@ -10,29 +10,27 @@ import (
 )
 
 type ProcedureHandler struct {
-	env *config.Env
+	env config.Env
 	db  *database.DB
 }
 
-func NewProceduresHandler(env *config.Env, db *database.DB) ProcedureHandler {
+func NewProceduresHandler(env config.Env, db *database.DB) ProcedureHandler {
 	return ProcedureHandler{env: env, db: db}
 }
 
 func (ph ProcedureHandler) AddRoutes(rg *echo.Group) {
 	router := rg.Group("/procedures")
-	router.GET("", ph.GetAll)
+	router.GET("", ph.All)
 	router.POST("", ph.Create)
 }
 
-func (ph ProcedureHandler) GetAll(c echo.Context) error {
+func (ph ProcedureHandler) All(c echo.Context) error {
 	p := Pagination{Limit: ph.env.API.Request.Limit, Page: ph.env.API.Request.Page}
-
 	if err := c.Bind(&p); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	procedures, err := ph.db.Procedures.GetAll(p.Limit, p.GetOffset())
-
+	procedures, err := ph.db.Procedures.All(p.Limit, p.Offset())
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
@@ -40,16 +38,38 @@ func (ph ProcedureHandler) GetAll(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{"status": true, "data": procedures, "meta": p})
 }
 
-func (ph ProcedureHandler) Create(c echo.Context) error {
-	var req createProcedureRequest
+type createProcedureRequest struct {
+	Procedure struct {
+		Title string `json:"title" validate:"required"`
+	} `json:"procedure" validate:"required"`
+}
 
-	p := &database.Procedure{}
-	if err := req.bind(c, p); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "slug": "procedure.create.bind-json", "error": err.Error()})
+func (r createProcedureRequest) Bind(c echo.Context, p *database.Procedure) error {
+	if err := c.Bind(r); err != nil {
+		return err
 	}
 
-	if err := ph.db.Procedures.Add(p); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "slug": "procedure.create.service-request"})
+	if err := c.Validate(r); err != nil {
+		return err
+	}
+
+	p.Title = r.Procedure.Title
+
+	return nil
+}
+
+func (ph ProcedureHandler) Create(c echo.Context) error {
+	var (
+		r createProcedureRequest
+		p database.Procedure
+	)
+
+	if err := r.Bind(c, &p); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "error": err.Error()})
+	}
+
+	if _, err := ph.db.Procedures.Add(p); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "error": err.Error()})
 	}
 
 	return c.JSON(http.StatusCreated, echo.Map{"status": true})

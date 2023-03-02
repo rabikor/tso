@@ -29,26 +29,26 @@ type Env struct {
 	}
 }
 
+func NewEnv(dotenvPath string) (env Env, _ error) {
+	if !isFileExists(dotenvPath) {
+		return env, fmt.Errorf("file [%s] with env vars was not found", dotenvPath)
+	}
+
+	if err := godotenv.Load(dotenvPath); err != nil {
+		return env, err
+	}
+
+	if err := envconfig.Process("", &env); err != nil {
+		return env, err
+	}
+
+	return env, nil
+}
+
 func isFileExists(path string) bool {
 	if f, err := os.Stat(path); os.IsNotExist(err) || f.IsDir() {
 		return false
 	}
 
 	return true
-}
-
-func (env *Env) ParseEnv(dotenvPath string) error {
-	if !isFileExists(dotenvPath) {
-		return fmt.Errorf("file [%s] with env vars was not found", dotenvPath)
-	}
-
-	if err := godotenv.Load(dotenvPath); err != nil {
-		return err
-	}
-
-	if err := envconfig.Process("", env); err != nil {
-		return err
-	}
-
-	return nil
 }

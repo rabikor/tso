@@ -6,17 +6,17 @@ import (
 
 	"treatment-scheme-organizer/config"
 	"treatment-scheme-organizer/database"
-	"treatment-scheme-organizer/router"
+	"treatment-scheme-organizer/database/migration"
 	"treatment-scheme-organizer/server"
 
 	"github.com/labstack/echo/v4"
 )
 
 func main() {
-	srv := router.New()
+	srv := server.NewRouter()
 
-	env := &config.Env{}
-	if err := env.ParseEnv("./.env"); err != nil {
+	env, err := config.NewEnv("./.env")
+	if err != nil {
 		srv.Logger.Fatal(err)
 	}
 
@@ -24,7 +24,17 @@ func main() {
 	if err != nil {
 		srv.Logger.Fatal(err)
 	}
-	defer db.Close()
+
+	if err := migration.Migrate(db); err != nil {
+		srv.Logger.Fatal(err)
+	}
+
+	defer func(db *database.DB) {
+		err := db.Close()
+		if err != nil {
+			srv.Logger.Fatal("Connection to mysql was not closed.")
+		}
+	}(db)
 
 	rtr := srv.Group("/api")
 
