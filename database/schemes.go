@@ -2,17 +2,18 @@ package database
 
 import (
 	"github.com/jmoiron/sqlx"
+	"github.com/labstack/gommon/log"
 )
 
 type (
 	schemesRepository interface {
-		GetById(id uint) (scheme *Scheme, err error)
-		GetByIllness(illnessID, limit, offset int) ([]Scheme, error)
-		Add(illnessID, length uint, days []SchemeDay) error
+		ByID(id uint) (s Scheme, err error)
+		ByIllness(illnessID, limit, offset int) ([]Scheme, error)
+		Add(s Scheme) (uint, error)
 	}
 	schemesTable struct {
 		*sqlx.DB
-		sdTable *schemeDaysTable
+		sdTable schemeDaysTable
 	}
 )
 
@@ -25,7 +26,7 @@ type Scheme struct {
 	Days    []SchemeDay `db:"days" json:"-"`
 }
 
-func (db *schemesTable) GetByIllness(illnessID, limit, offset int) (schemes []Scheme, _ error) {
+func (db schemesTable) ByIllness(illnessID, limit, offset int) (ss []Scheme, _ error) {
 	sql := `
 		SELECT s.*, 
 		       i.id as "illness.id", 
@@ -36,59 +37,52 @@ func (db *schemesTable) GetByIllness(illnessID, limit, offset int) (schemes []Sc
 		WHERE s.illness_id = ?
 		LIMIT ? OFFSET ?`
 
-	err := db.Select(&schemes, sql, illnessID, limit, offset)
-	if err != nil {
-		return nil, err
-	}
-
-	return schemes, nil
+	return ss, db.Select(&ss, sql, illnessID, limit, offset)
 }
 
-func (db *schemesTable) GetById(id uint) (s *Scheme, err error) {
-	s = new(Scheme)
-	if err = db.Get(s, "SELECT * FROM schemes WHERE id = ?", id); err != nil {
-		return
+func (db schemesTable) ByID(id uint) (s Scheme, err error) {
+	if err = db.Get(&s, "SELECT * FROM schemes WHERE id = ?", id); err != nil {
+		return s, err
 	}
 
 	if err = db.Select(&s.Days, "SELECT * FROM scheme_days WHERE scheme_id = ?", s.ID); err != nil {
-		return
+		return s, err
 	}
 
-	return
+	return s, nil
 }
 
-func (db *schemesTable) Add(illnessID, length uint, days []SchemeDay) error {
+func (db schemesTable) Add(s Scheme) (uint, error) {
 	const (
 		qScheme = "INSERT INTO schemes (illness_id, length) VALUES (?, ?)"
 		qDays   = "INSERT INTO scheme_days (scheme_id, procedure_id, drug_id, `order`, times, frequency) VALUES (?, ?, ?, ?, ?, ?)"
 	)
-	
+
 	tx, err := db.Begin()
 	if err != nil {
-		return err
+		return 0, err
 	}
-	
+
 	defer func() {
 		if err != nil {
 			if err := tx.Rollback(); err != nil {
-				// TODO: log the rollback error
+				log.Error(err)
 			}
 		}
 	}()
 
-	var result *sqlx.Result
-	result, err = tx.Exec(qScheme, illnessID, length)
+	r, err := tx.Exec(qScheme, s.IllnessID, s.Length)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	
-	lastID, _ := result.LastInsertId()
-	for _, sd := range days {
+
+	lastID, _ := r.LastInsertId()
+	for _, sd := range s.Days {
 		_, err = tx.Exec(qDays, lastID, sd.ProcedureID, sd.DrugID, sd.Order, sd.Times, sd.Frequency)
 		if err != nil {
-			return err
+			return 0, err
 		}
 	}
 
-	return tx.Commit()
+	return uint(lastID), tx.Commit()
 }
