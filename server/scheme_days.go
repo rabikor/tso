@@ -64,13 +64,13 @@ func (dh SchemeDayHandler) CreateForScheme(c echo.Context) error {
 
 	schemeID, _ := strconv.Atoi(c.Param("schemeID"))
 
-	if err := req.bind(c, sd); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "slug": "scheme.day.create.bind-json", "error": err.Error()})
-	}
-
 	s, err := dh.db.Schemes.GetById(uint(schemeID))
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "slug": "scheme.day.create.not-found-illness", "error": err.Error()})
+		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "slug": "scheme.day.create.not-found-scheme", "error": err.Error()})
+	}
+
+	if err := req.bind(c, sd); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "slug": "scheme.day.create.bind-json", "error": err.Error()})
 	}
 	sd.Scheme = *s
 

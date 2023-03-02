@@ -42,15 +42,20 @@ func (dh DrugHandler) GetAll(c echo.Context) error {
 
 func (dh DrugHandler) Create(c echo.Context) error {
 	var req createDrugRequest
-
 	drug := &database.Drug{}
 
 	if err := req.bind(c, drug); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "slug": "drug.create.bind-json", "error": err.Error()})
+		return echo.NewHTTPError(
+			http.StatusBadRequest,
+			echo.Map{"status": false, "slug": "drug.create.bind-json", "error": err.Error()},
+		)
 	}
 
 	if err := dh.db.Drugs.Add(drug); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "slug": "drug.create.service-request"})
+		return echo.NewHTTPError(
+			http.StatusBadRequest,
+			echo.Map{"status": false, "slug": "drug.create.service-request", "error": err.Error()},
+		)
 	}
 
 	return c.JSON(http.StatusCreated, echo.Map{"status": true})

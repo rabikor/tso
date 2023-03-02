@@ -59,11 +59,23 @@ func (db *schemeDaysTable) GetByScheme(schemeID, limit, offset int) (sds []Schem
 func (db *schemeDaysTable) Add(schemeDay *SchemeDay) error {
 	var q = "INSERT INTO scheme_days (scheme_id, procedure_id, drug_id, `order`, times, frequency) VALUES (?, ?, ?, ?, ?, ?)"
 
+	if schemeDay.SchemeID == 0 && schemeDay.Scheme.ID > 0 {
+		schemeDay.SchemeID = schemeDay.Scheme.ID
+	}
+
+	if schemeDay.ProcedureID == 0 && schemeDay.Procedure.ID > 0 {
+		schemeDay.ProcedureID = schemeDay.Procedure.ID
+	}
+
+	if schemeDay.DrugID == 0 && schemeDay.Drug.ID > 0 {
+		schemeDay.DrugID = schemeDay.Drug.ID
+	}
+
 	if result, err := db.Exec(
 		q,
-		schemeDay.Scheme.ID,
-		schemeDay.Procedure.ID,
-		schemeDay.Drug.ID,
+		schemeDay.SchemeID,
+		schemeDay.ProcedureID,
+		schemeDay.DrugID,
 		schemeDay.Order,
 		schemeDay.Times,
 		schemeDay.Frequency,

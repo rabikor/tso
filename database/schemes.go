@@ -66,7 +66,11 @@ func (db *schemesTable) Add(s *Scheme) error {
 		return err
 	}
 
-	if res, err := tx.Exec(q, s.Illness.ID, s.Length); err != nil {
+	if s.IllnessID == 0 && s.Illness.ID > 0 {
+		s.IllnessID = s.Illness.ID
+	}
+
+	if res, err := tx.Exec(q, s.IllnessID, s.Length); err != nil {
 		tx.Rollback()
 		return err
 	} else {
