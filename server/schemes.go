@@ -90,22 +90,22 @@ func (dh SchemeHandler) Create(c echo.Context) error {
 	)
 
 	if err := r.Bind(c, &s); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "error": err.Error()})
+		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
 	for _, sd := range r.Days {
 		if err := sd.Validate(s); err != nil {
-			return echo.NewHTTPError(http.StatusConflict, echo.Map{"status": false, "error": err.Error()})
+			return echo.NewHTTPError(http.StatusConflict, err)
 		}
 	}
 
 	_, err := dh.db.Illnesses.ByID(r.Scheme.IllnessID)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "error": err.Error()})
+		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
 	if _, err := dh.db.Schemes.Add(s); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "error": err.Error()})
+		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
 	return c.JSON(http.StatusCreated, echo.Map{"status": true})

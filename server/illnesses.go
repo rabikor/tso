@@ -65,11 +65,11 @@ func (ih IllnessHandler) Create(c echo.Context) error {
 	)
 
 	if err := req.Bind(c, &i); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "error": err.Error()})
+		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
 	if _, err := ih.db.Illnesses.Add(i); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "error": err.Error()})
+		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
 	return c.JSON(http.StatusCreated, echo.Map{"status": true})

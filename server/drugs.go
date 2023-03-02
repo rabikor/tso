@@ -27,12 +27,12 @@ func (dh DrugHandler) AddRoutes(rg *echo.Group) {
 func (dh DrugHandler) All(c echo.Context) error {
 	p := Pagination{Limit: dh.env.API.Request.Limit, Page: dh.env.API.Request.Page}
 	if err := c.Bind(&p); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
 	drugs, err := dh.db.Drugs.All(p.Limit, p.Offset())
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
 	return c.JSON(http.StatusOK, echo.Map{"status": true, "data": drugs, "meta": p})
@@ -65,17 +65,11 @@ func (dh DrugHandler) Create(c echo.Context) error {
 	)
 
 	if err := r.Bind(c, &d); err != nil {
-		return echo.NewHTTPError(
-			http.StatusBadRequest,
-			echo.Map{"status": false, "error": err.Error()},
-		)
+		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
 	if _, err := dh.db.Drugs.Add(d); err != nil {
-		return echo.NewHTTPError(
-			http.StatusBadRequest,
-			echo.Map{"status": false, "error": err.Error()},
-		)
+		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
 	return c.JSON(http.StatusCreated, echo.Map{"status": true})

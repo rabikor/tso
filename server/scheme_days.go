@@ -95,28 +95,28 @@ func (dh SchemeDayHandler) CreateForScheme(c echo.Context) error {
 	schemeID, _ := strconv.Atoi(c.Param("schemeID"))
 
 	if err := r.Bind(c, &sd); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "error": err.Error()})
+		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
 	s, err := dh.db.Schemes.ByID(uint(schemeID))
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "error": err.Error()})
+		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
 	if err := r.SchemeDay.Validate(s); err != nil {
-		return echo.NewHTTPError(http.StatusConflict, echo.Map{"status": false, "error": err.Error()})
+		return echo.NewHTTPError(http.StatusConflict, err)
 	}
 
 	if _, err := dh.db.Drugs.ByID(r.SchemeDay.DrugID); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "error": err.Error()})
+		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
 	if _, err := dh.db.Procedures.ByID(r.SchemeDay.ProcedureID); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "error": err.Error()})
+		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
 	if _, err := dh.db.SchemeDays.Add(sd); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "error": err.Error()})
+		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
 	return c.JSON(http.StatusCreated, echo.Map{"status": true})

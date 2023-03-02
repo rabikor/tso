@@ -13,30 +13,32 @@ import (
 )
 
 func main() {
-	srv := server.NewRouter()
+	e := echo.New()
+	e.HTTPErrorHandler = server.NewErrorHandler
+	server.NewRouter(e)
 
 	env, err := config.NewEnv("./.env")
 	if err != nil {
-		srv.Logger.Fatal(err)
+		e.Logger.Fatal(err)
 	}
 
 	db, err := database.Open(env)
 	if err != nil {
-		srv.Logger.Fatal(err)
+		e.Logger.Fatal(err)
 	}
 
 	if err := migration.Migrate(db); err != nil {
-		srv.Logger.Fatal(err)
+		e.Logger.Fatal(err)
 	}
 
 	defer func(db *database.DB) {
 		err := db.Close()
 		if err != nil {
-			srv.Logger.Fatal("Connection to mysql was not closed.")
+			e.Logger.Fatal("Connection to mysql was not closed.")
 		}
 	}(db)
 
-	rtr := srv.Group("/api")
+	rtr := e.Group("/api")
 
 	rtr.GET("/ping", func(ctx echo.Context) error {
 		return ctx.JSON(http.StatusOK, echo.Map{"status": true, "message": "pong"})
@@ -57,5 +59,5 @@ func main() {
 	schemeDays := server.NewSchemeDaysHandler(env, db)
 	schemeDays.AddRoutes(rtr)
 
-	srv.Logger.Fatal(srv.Start(fmt.Sprintf(":%d", env.Server.Port)))
+	e.Logger.Fatal(e.Start(fmt.Sprintf(":%d", env.Server.Port)))
 }
