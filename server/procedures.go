@@ -65,11 +65,11 @@ func (ph ProcedureHandler) Create(c echo.Context) error {
 	)
 
 	if err := r.Bind(c, &p); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "error": err.Error()})
+		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
 	if _, err := ph.db.Procedures.Add(p); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "error": err.Error()})
+		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
 	return c.JSON(http.StatusCreated, echo.Map{"status": true})
