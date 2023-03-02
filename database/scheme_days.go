@@ -19,9 +19,9 @@ type SchemeDay struct {
 	SchemeID    uint `db:"scheme_id" json:"-" bson:"-"`
 	ProcedureID uint `db:"procedure_id" json:"-" bson:"-"`
 	DrugID      uint `db:"drug_id" json:"-" bson:"-"`
-	DayNumber   uint `db:"day_number" json:"dayNumber"`
-	Times       uint `json:"times"`
-	EachHours   uint `db:"each_hours" json:"eachHours"`
+	Order       uint `db:"order" json:"dayNumber"`
+	Times       uint `db:"times" json:"times"`
+	Frequency   uint `db:"frequency" json:"eachHours"`
 
 	Drug      Drug      `db:"drug" json:"drug"`
 	Procedure Procedure `db:"procedure" json:"procedure"`
@@ -29,7 +29,7 @@ type SchemeDay struct {
 }
 
 func (db *schemeDaysTable) GetByScheme(schemeID, limit, offset int) (sds []SchemeDay, _ error) {
-	sql := `
+	q := `
 		SELECT sd.*, 
 		       d.id as "drug.id", 
 		       d.title as "drug.title",
@@ -44,7 +44,7 @@ func (db *schemeDaysTable) GetByScheme(schemeID, limit, offset int) (sds []Schem
 
 	err := db.Select(
 		&sds,
-		sql,
+		q,
 		schemeID,
 		limit,
 		offset,
@@ -56,20 +56,29 @@ func (db *schemeDaysTable) GetByScheme(schemeID, limit, offset int) (sds []Schem
 	return sds, nil
 }
 
-var sqlCreateSchemeDay string = `
-	INSERT INTO scheme_days 
-	    (scheme_id, procedure_id, drug_id, day_number, times, each_hours) 
-	VALUES (?, ?, ?, ?, ?, ?)`
-
 func (db *schemeDaysTable) Add(schemeDay *SchemeDay) error {
+	var q = "INSERT INTO scheme_days (scheme_id, procedure_id, drug_id, `order`, times, frequency) VALUES (?, ?, ?, ?, ?, ?)"
+
+	if schemeDay.SchemeID == 0 && schemeDay.Scheme.ID > 0 {
+		schemeDay.SchemeID = schemeDay.Scheme.ID
+	}
+
+	if schemeDay.ProcedureID == 0 && schemeDay.Procedure.ID > 0 {
+		schemeDay.ProcedureID = schemeDay.Procedure.ID
+	}
+
+	if schemeDay.DrugID == 0 && schemeDay.Drug.ID > 0 {
+		schemeDay.DrugID = schemeDay.Drug.ID
+	}
+
 	if result, err := db.Exec(
-		sqlCreateSchemeDay,
-		schemeDay.Scheme.ID,
-		schemeDay.Procedure.ID,
-		schemeDay.Drug.ID,
-		schemeDay.DayNumber,
+		q,
+		schemeDay.SchemeID,
+		schemeDay.ProcedureID,
+		schemeDay.DrugID,
+		schemeDay.Order,
 		schemeDay.Times,
-		schemeDay.EachHours,
+		schemeDay.Frequency,
 	); err != nil {
 		return err
 	} else {

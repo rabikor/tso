@@ -45,26 +45,30 @@ func (dh SchemeHandler) GetByIllness(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{"status": true, "data": schemes, "meta": p})
 }
 
-type createSchemeRequest struct {
-	IllnessID uint `json:"illness" binding:"required"`
-	Length    uint `json:"length" binding:"required"`
-}
-
 func (dh SchemeHandler) Create(c echo.Context) error {
 	var req createSchemeRequest
 
-	if err := c.Bind(&req); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "slug": "scheme.create.bind-json", "error": err})
+	s := &database.Scheme{}
+
+	if err := req.bind(c, s); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "slug": "scheme.create.bind-json", "error": err.Error()})
 	}
 
-	illness, err := dh.db.Illnesses.GetById(req.IllnessID)
+	for _, sd := range s.Days {
+		if err := ValidateSchemeDay(&sd); err != nil {
+			return echo.NewHTTPError(http.StatusConflict, echo.Map{"status": false, "slug": "scheme.create.day-validation", "error": err.Error()})
+		}
+	}
+
+	i, err := dh.db.Illnesses.GetById(req.Scheme.IllnessID)
 
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "slug": "scheme.create.not-found-illness", "error": err.Error()})
 	}
 
-	scheme := database.Scheme{Illness: *illness, Length: req.Length}
-	if err := dh.db.Schemes.Add(&scheme); err != nil {
+	s.Illness = *i
+
+	if err := dh.db.Schemes.Add(s); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, echo.Map{"status": false, "slug": "scheme.create.service-request"})
 	}
 

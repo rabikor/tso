@@ -21,7 +21,8 @@ type Scheme struct {
 	IllnessID uint `db:"illness_id" json:"-" bson:"-"`
 	Length    uint `json:"length"`
 
-	Illness Illness `db:"illness" json:"-"`
+	Illness Illness     `db:"illness" json:"-"`
+	Days    []SchemeDay `db:"days" json:"-"`
 }
 
 func (db *schemesTable) GetByIllness(illnessID, limit, offset int) (schemes []Scheme, _ error) {
@@ -43,23 +44,54 @@ func (db *schemesTable) GetByIllness(illnessID, limit, offset int) (schemes []Sc
 	return schemes, nil
 }
 
-func (db *schemesTable) GetById(id uint) (scheme *Scheme, err error) {
-	scheme = new(Scheme)
-	if err = db.Get(scheme, "SELECT * FROM schemes WHERE id = ?", id); err != nil {
+func (db *schemesTable) GetById(id uint) (s *Scheme, err error) {
+	s = new(Scheme)
+	if err = db.Get(s, "SELECT * FROM schemes WHERE id = ?", id); err != nil {
+		return
+	}
+
+	if err = db.Select(&s.Days, "SELECT * FROM scheme_days WHERE scheme_id = ?", s.ID); err != nil {
 		return
 	}
 
 	return
 }
 
-func (db *schemesTable) Add(scheme *Scheme) error {
-	var sql = "INSERT INTO schemes (illness_id, length) VALUES (?, ?)"
+func (db *schemesTable) Add(s *Scheme) error {
+	var q string
+	q = "INSERT INTO schemes (illness_id, length) VALUES (?, ?)"
 
-	if res, err := db.Exec(sql, scheme.Illness.ID, scheme.Length); err != nil {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+
+	if s.IllnessID == 0 && s.Illness.ID > 0 {
+		s.IllnessID = s.Illness.ID
+	}
+
+	if res, err := tx.Exec(q, s.IllnessID, s.Length); err != nil {
+		tx.Rollback()
 		return err
 	} else {
 		lastId, _ := res.LastInsertId()
-		scheme.ID = uint(lastId)
+		s.ID = uint(lastId)
+	}
+
+	q = "INSERT INTO scheme_days (scheme_id, procedure_id, drug_id, `order`, times, frequency) VALUES (?, ?, ?, ?, ?, ?)"
+
+	for _, sd := range s.Days {
+		if res, err := tx.Exec(q, s.ID, sd.ProcedureID, sd.DrugID, sd.Order, sd.Times, sd.Frequency); err != nil {
+			tx.Rollback()
+			return err
+		} else {
+			lastId, _ := res.LastInsertId()
+			sd.ID = uint(lastId)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
 	}
 
 	return nil

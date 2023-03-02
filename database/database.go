@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"log"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
@@ -48,4 +49,28 @@ func Open(env *config.Env) (*DB, error) {
 		Schemes:    &schemesTable{DB: db, sdTable: sdTable},
 		SchemeDays: sdTable,
 	}, nil
+}
+
+func TestDB() *DB {
+	env := &config.Env{}
+	if err := env.ParseEnv("./../.env"); err != nil {
+		log.Fatal(err)
+	}
+
+	db, err := Open(env)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return db
+}
+
+func TruncateTables(db *sqlx.DB) {
+	db.MustExec("SET FOREIGN_KEY_CHECKS = 0")
+	db.MustExec("TRUNCATE TABLE drugs")
+	db.MustExec("TRUNCATE TABLE illnesses")
+	db.MustExec("TRUNCATE TABLE procedures")
+	db.MustExec("TRUNCATE TABLE scheme_days")
+	db.MustExec("TRUNCATE TABLE schemes")
+	db.MustExec("SET FOREIGN_KEY_CHECKS = 1")
 }

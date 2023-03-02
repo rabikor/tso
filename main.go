@@ -6,13 +6,14 @@ import (
 
 	"treatment-scheme-organizer/config"
 	"treatment-scheme-organizer/database"
+	"treatment-scheme-organizer/router"
 	"treatment-scheme-organizer/server"
 
 	"github.com/labstack/echo/v4"
 )
 
 func main() {
-	srv := echo.New()
+	srv := router.New()
 
 	env := &config.Env{}
 	if err := env.ParseEnv("./.env"); err != nil {
