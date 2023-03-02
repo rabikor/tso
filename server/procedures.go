@@ -18,19 +18,19 @@ func NewProceduresHandler(env config.Env, db *database.DB) ProcedureHandler {
 	return ProcedureHandler{env: env, db: db}
 }
 
-func (ph ProcedureHandler) AddRoutes(rg *echo.Group) {
+func (h ProcedureHandler) AddRoutes(rg *echo.Group) {
 	router := rg.Group("/procedures")
-	router.GET("", ph.All)
-	router.POST("", ph.Create)
+	router.GET("", h.All)
+	router.POST("", h.Create)
 }
 
-func (ph ProcedureHandler) All(c echo.Context) error {
-	p := Pagination{Limit: ph.env.API.Request.Limit, Page: ph.env.API.Request.Page}
+func (h ProcedureHandler) All(c echo.Context) error {
+	p := NewPagination(h.env)
 	if err := c.Bind(&p); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	procedures, err := ph.db.Procedures.All(p.Limit, p.Offset())
+	procedures, err := h.db.Procedures.All(p.Limit, p.Offset())
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
@@ -58,7 +58,7 @@ func (r createProcedureRequest) Bind(c echo.Context, p *database.Procedure) erro
 	return nil
 }
 
-func (ph ProcedureHandler) Create(c echo.Context) error {
+func (h ProcedureHandler) Create(c echo.Context) error {
 	var (
 		r createProcedureRequest
 		p database.Procedure
@@ -68,7 +68,7 @@ func (ph ProcedureHandler) Create(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
-	if _, err := ph.db.Procedures.Add(p); err != nil {
+	if _, err := h.db.Procedures.Add(p); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 

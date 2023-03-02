@@ -5,6 +5,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"gopkg.in/go-playground/validator.v9"
+	"treatment-scheme-organizer/config"
 )
 
 type Pagination struct {
@@ -14,6 +15,10 @@ type Pagination struct {
 
 func (p Pagination) Offset() int {
 	return (p.Page - 1) * p.Limit
+}
+
+func NewPagination(env config.Env) Pagination {
+	return Pagination{Limit: env.API.Request.Limit, Page: env.API.Request.Page}
 }
 
 type Validator struct {

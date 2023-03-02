@@ -19,16 +19,16 @@ func NewSchemesHandler(env config.Env, db *database.DB) SchemeHandler {
 	return SchemeHandler{env: env, db: db}
 }
 
-func (dh SchemeHandler) AddRoutes(rtr *echo.Group) {
+func (h SchemeHandler) AddRoutes(rtr *echo.Group) {
 	illnessGroup := rtr.Group("/illnesses")
-	illnessGroup.GET("/:illnessID/schemes", dh.ByIllness)
+	illnessGroup.GET("/:illnessID/schemes", h.ByIllness)
 
 	schemeGroup := rtr.Group("/schemes")
-	schemeGroup.POST("", dh.Create)
+	schemeGroup.POST("", h.Create)
 }
 
-func (dh SchemeHandler) ByIllness(c echo.Context) error {
-	p := Pagination{Limit: dh.env.API.Request.Limit, Page: dh.env.API.Request.Page}
+func (h SchemeHandler) ByIllness(c echo.Context) error {
+	p := NewPagination(h.env)
 
 	if err := c.Bind(&p); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
@@ -36,8 +36,7 @@ func (dh SchemeHandler) ByIllness(c echo.Context) error {
 
 	illnessID, _ := strconv.Atoi(c.Param("illnessID"))
 
-	schemes, err := dh.db.Schemes.ByIllness(illnessID, p.Limit, p.Offset())
-
+	schemes, err := h.db.Schemes.ByIllness(illnessID, p.Limit, p.Offset())
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
@@ -83,7 +82,7 @@ func (r createSchemeRequest) Bind(c echo.Context, s *database.Scheme) error {
 	return nil
 }
 
-func (dh SchemeHandler) Create(c echo.Context) error {
+func (h SchemeHandler) Create(c echo.Context) error {
 	var (
 		r createSchemeRequest
 		s database.Scheme
@@ -99,12 +98,12 @@ func (dh SchemeHandler) Create(c echo.Context) error {
 		}
 	}
 
-	_, err := dh.db.Illnesses.ByID(r.Scheme.IllnessID)
+	_, err := h.db.Illnesses.ByID(r.Scheme.IllnessID)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
-	if _, err := dh.db.Schemes.Add(s); err != nil {
+	if _, err := h.db.Schemes.Add(s); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
