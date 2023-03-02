@@ -7,7 +7,7 @@ import (
 type (
 	schemeDaysRepository interface {
 		GetByScheme(schemeID, limit, offset int) ([]SchemeDay, error)
-		Add(sd *SchemeDay) error
+		Add(sd SchemeDay) error
 	}
 	schemeDaysTable struct {
 		*sqlx.DB
@@ -56,22 +56,13 @@ func (db *schemeDaysTable) GetByScheme(schemeID, limit, offset int) (sds []Schem
 	return sds, nil
 }
 
-func (db *schemeDaysTable) Add(schemeDay *SchemeDay) error {
-	var q = "INSERT INTO scheme_days (scheme_id, procedure_id, drug_id, `order`, times, frequency) VALUES (?, ?, ?, ?, ?, ?)"
+// Add creates a new scheme day in the table.
+// Do not use integrated relational fields to pass the arguments.
+// For example, use SchemeID instead od Scheme.ID to pass the actual scheme ID.
+func (db *schemeDaysTable) Add(schemeDay SchemeDay) error {
+	const q = "INSERT INTO scheme_days (scheme_id, procedure_id, drug_id, `order`, times, frequency) VALUES (?, ?, ?, ?, ?, ?)"
 
-	if schemeDay.SchemeID == 0 && schemeDay.Scheme.ID > 0 {
-		schemeDay.SchemeID = schemeDay.Scheme.ID
-	}
-
-	if schemeDay.ProcedureID == 0 && schemeDay.Procedure.ID > 0 {
-		schemeDay.ProcedureID = schemeDay.Procedure.ID
-	}
-
-	if schemeDay.DrugID == 0 && schemeDay.Drug.ID > 0 {
-		schemeDay.DrugID = schemeDay.Drug.ID
-	}
-
-	if result, err := db.Exec(
+	_, err := db.Exec(
 		q,
 		schemeDay.SchemeID,
 		schemeDay.ProcedureID,
@@ -79,12 +70,6 @@ func (db *schemeDaysTable) Add(schemeDay *SchemeDay) error {
 		schemeDay.Order,
 		schemeDay.Times,
 		schemeDay.Frequency,
-	); err != nil {
-		return err
-	} else {
-		lastId, _ := result.LastInsertId()
-		schemeDay.ID = uint(lastId)
-	}
-
-	return nil
+	)
+	return err
 }
