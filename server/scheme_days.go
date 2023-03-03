@@ -13,11 +13,14 @@ import (
 
 type SchemeDayHandler struct {
 	env config.Env
-	db  *database.DB
+	dr  database.DrugsRepository
+	pr  database.ProceduresRepository
+	sr  database.SchemesRepository
+	sdr database.SchemeDaysRepository
 }
 
-func NewSchemeDaysHandler(env config.Env, db *database.DB) SchemeDayHandler {
-	return SchemeDayHandler{env: env, db: db}
+func NewSchemeDaysHandler(env config.Env, sdr database.SchemeDaysRepository) SchemeDayHandler {
+	return SchemeDayHandler{env: env, sdr: sdr}
 }
 
 func (h SchemeDayHandler) AddRoutes(rtr *echo.Group) {
@@ -34,7 +37,7 @@ func (h SchemeDayHandler) ByScheme(c echo.Context) error {
 
 	schemeID, _ := strconv.Atoi(c.Param("schemeID"))
 
-	schemeDays, err := h.db.SchemeDays.ByScheme(schemeID, p.Limit, p.Offset())
+	schemeDays, err := h.sdr.ByScheme(schemeID, p.Limit, p.Offset())
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
@@ -96,7 +99,7 @@ func (h SchemeDayHandler) CreateForScheme(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
-	s, err := h.db.Schemes.ByID(uint(schemeID))
+	s, err := h.sr.ByID(uint(schemeID))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
@@ -105,15 +108,15 @@ func (h SchemeDayHandler) CreateForScheme(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusConflict, err)
 	}
 
-	if _, err := h.db.Drugs.ByID(r.SchemeDay.DrugID); err != nil {
+	if _, err := h.dr.ByID(r.SchemeDay.DrugID); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
-	if _, err := h.db.Procedures.ByID(r.SchemeDay.ProcedureID); err != nil {
+	if _, err := h.pr.ByID(r.SchemeDay.ProcedureID); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
-	if _, err := h.db.SchemeDays.Add(sd); err != nil {
+	if _, err := h.sdr.Add(sd); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/jmoiron/sqlx"
 	"treatment-scheme-organizer/config"
 	"treatment-scheme-organizer/database"
 	"treatment-scheme-organizer/database/migration"
@@ -31,7 +32,7 @@ func main() {
 		e.Logger.Fatal(err)
 	}
 
-	defer func(db *database.DB) {
+	defer func(db *sqlx.DB) {
 		err := db.Close()
 		if err != nil {
 			e.Logger.Fatal("Connection to mysql was not closed.")
@@ -44,19 +45,26 @@ func main() {
 		return ctx.JSON(http.StatusOK, echo.Map{"status": true, "message": "pong"})
 	})
 
-	drugs := server.NewDrugsHandler(env, db)
+	p := server.NewPagination(env)
+
+	dr := database.NewDrugsRepository(db)
+	drugs := server.NewDrugsHandler(p, dr)
 	drugs.AddRoutes(rtr)
 
-	illnesses := server.NewIllnessesHandler(env, db)
+	ir := database.NewIllnessesRepository(db)
+	illnesses := server.NewIllnessesHandler(env, ir)
 	illnesses.AddRoutes(rtr)
 
-	procedures := server.NewProceduresHandler(env, db)
+	pr := database.NewProceduresRepository(db)
+	procedures := server.NewProceduresHandler(env, pr)
 	procedures.AddRoutes(rtr)
 
-	schemes := server.NewSchemesHandler(env, db)
+	sr := database.NewSchemesRepository(db)
+	schemes := server.NewSchemesHandler(env, sr)
 	schemes.AddRoutes(rtr)
 
-	schemeDays := server.NewSchemeDaysHandler(env, db)
+	sdr := database.NewSchemeDaysRepository(db)
+	schemeDays := server.NewSchemeDaysHandler(env, sdr)
 	schemeDays.AddRoutes(rtr)
 
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%d", env.Server.Port)))

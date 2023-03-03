@@ -12,11 +12,12 @@ import (
 
 type SchemeHandler struct {
 	env config.Env
-	db  *database.DB
+	ir  database.IllnessesRepository
+	sr  database.SchemesRepository
 }
 
-func NewSchemesHandler(env config.Env, db *database.DB) SchemeHandler {
-	return SchemeHandler{env: env, db: db}
+func NewSchemesHandler(env config.Env, sr database.SchemesRepository) SchemeHandler {
+	return SchemeHandler{env: env, sr: sr}
 }
 
 func (h SchemeHandler) AddRoutes(rtr *echo.Group) {
@@ -36,7 +37,7 @@ func (h SchemeHandler) ByIllness(c echo.Context) error {
 
 	illnessID, _ := strconv.Atoi(c.Param("illnessID"))
 
-	schemes, err := h.db.Schemes.ByIllness(illnessID, p.Limit, p.Offset())
+	schemes, err := h.sr.ByIllness(illnessID, p.Limit, p.Offset())
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
@@ -98,12 +99,12 @@ func (h SchemeHandler) Create(c echo.Context) error {
 		}
 	}
 
-	_, err := h.db.Illnesses.ByID(r.Scheme.IllnessID)
+	_, err := h.ir.ByID(r.Scheme.IllnessID)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
-	if _, err := h.db.Schemes.Add(s); err != nil {
+	if _, err := h.sr.Add(s); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 

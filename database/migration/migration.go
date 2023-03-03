@@ -5,12 +5,12 @@ import (
 	"errors"
 	"io/fs"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/labstack/gommon/log"
 	"github.com/pressly/goose/v3"
-	"treatment-scheme-organizer/database"
 )
 
-func Migrate(db *database.DB) error {
+func Migrate(db *sqlx.DB) error {
 	var embedMigrations embed.FS
 
 	const (
@@ -28,7 +28,7 @@ func Migrate(db *database.DB) error {
 		log.Error(err)
 	}
 
-	if err := goose.Up(db.DB.DB, dir); err != nil {
+	if err := goose.Up(db.DB, dir); err != nil {
 		return err
 	}
 

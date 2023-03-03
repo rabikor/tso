@@ -11,11 +11,11 @@ import (
 
 type ProcedureHandler struct {
 	env config.Env
-	db  *database.DB
+	pr  database.ProceduresRepository
 }
 
-func NewProceduresHandler(env config.Env, db *database.DB) ProcedureHandler {
-	return ProcedureHandler{env: env, db: db}
+func NewProceduresHandler(env config.Env, pr database.ProceduresRepository) ProcedureHandler {
+	return ProcedureHandler{env: env, pr: pr}
 }
 
 func (h ProcedureHandler) AddRoutes(rg *echo.Group) {
@@ -30,7 +30,7 @@ func (h ProcedureHandler) All(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	procedures, err := h.db.Procedures.All(p.Limit, p.Offset())
+	procedures, err := h.pr.All(p.Limit, p.Offset())
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
@@ -68,7 +68,7 @@ func (h ProcedureHandler) Create(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
-	if _, err := h.db.Procedures.Add(p); err != nil {
+	if _, err := h.pr.Add(p); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 

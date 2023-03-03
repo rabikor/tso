@@ -11,11 +11,11 @@ import (
 
 type IllnessHandler struct {
 	env config.Env
-	db  *database.DB
+	ir  database.IllnessesRepository
 }
 
-func NewIllnessesHandler(env config.Env, db *database.DB) IllnessHandler {
-	return IllnessHandler{env: env, db: db}
+func NewIllnessesHandler(env config.Env, ir database.IllnessesRepository) IllnessHandler {
+	return IllnessHandler{env: env, ir: ir}
 }
 
 func (h IllnessHandler) AddRoutes(rg *echo.Group) {
@@ -30,7 +30,7 @@ func (h IllnessHandler) All(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	illnesses, err := h.db.Illnesses.All(p.Limit, p.Offset())
+	illnesses, err := h.ir.All(p.Limit, p.Offset())
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
@@ -68,7 +68,7 @@ func (h IllnessHandler) Create(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
-	if _, err := h.db.Illnesses.Add(i); err != nil {
+	if _, err := h.ir.Add(i); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 

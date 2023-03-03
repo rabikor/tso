@@ -10,16 +10,7 @@ import (
 	"treatment-scheme-organizer/config"
 )
 
-type DB struct {
-	*sqlx.DB
-	Drugs      drugsRepository
-	Illnesses  illnessesRepository
-	Procedures proceduresRepository
-	Schemes    schemesRepository
-	SchemeDays schemeDaysRepository
-}
-
-func Open(env config.Env) (*DB, error) {
+func Open(env config.Env) (*sqlx.DB, error) {
 	dsn := fmt.Sprintf(
 		"%s:%s@tcp(%s:%d)/%s?charset=utf8mb4",
 		env.DB.User,
@@ -37,13 +28,5 @@ func Open(env config.Env) (*DB, error) {
 		return nil, err
 	}
 
-	sdt := schemeDaysTable{DB: db}
-	return &DB{
-		DB:         db,
-		Drugs:      drugsTable{DB: db},
-		Illnesses:  illnessesTable{DB: db},
-		Procedures: proceduresTable{DB: db},
-		Schemes:    schemesTable{DB: db, sdTable: sdt},
-		SchemeDays: sdt,
-	}, nil
+	return db, nil
 }

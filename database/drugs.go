@@ -7,12 +7,12 @@ import (
 )
 
 type (
-	drugsRepository interface {
+	DrugsRepository interface {
 		All(limit, offset int) (ds []Drug, _ error)
 		ByID(id uint) (Drug, error)
-		Add(d Drug) (uint, error)
+		Add(title string) (uint, error)
 	}
-	drugsTable struct {
+	DrugsTable struct {
 		*sqlx.DB
 	}
 )
@@ -22,16 +22,20 @@ type Drug struct {
 	Title string `json:"title"`
 }
 
-func (db drugsTable) All(limit, offset int) (ds []Drug, _ error) {
+func NewDrugsRepository(db *sqlx.DB) DrugsRepository {
+	return DrugsTable{db}
+}
+
+func (db DrugsTable) All(limit, offset int) (ds []Drug, _ error) {
 	return ds, db.Select(&ds, fmt.Sprintf("SELECT * FROM drugs LIMIT %d OFFSET %d", limit, offset))
 }
 
-func (db drugsTable) ByID(id uint) (d Drug, err error) {
+func (db DrugsTable) ByID(id uint) (d Drug, err error) {
 	return d, db.Get(&d, "SELECT * FROM drugs WHERE id = ?", id)
 }
 
-func (db drugsTable) Add(d Drug) (uint, error) {
-	result, err := db.Exec("INSERT INTO drugs (title) VALUES (?)", d.Title)
+func (db DrugsTable) Add(t string) (uint, error) {
+	result, err := db.Exec("INSERT INTO drugs (title) VALUES (?)", t)
 	if err != nil {
 		return 0, err
 	}
