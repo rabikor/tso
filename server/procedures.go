@@ -3,19 +3,18 @@ package server
 import (
 	"net/http"
 
-	"treatment-scheme-organizer/config"
 	"treatment-scheme-organizer/database"
 
 	"github.com/labstack/echo/v4"
 )
 
 type ProcedureHandler struct {
-	env config.Env
-	pr  database.ProceduresRepository
+	p  Pagination
+	pr database.ProceduresRepository
 }
 
-func NewProceduresHandler(env config.Env, pr database.ProceduresRepository) ProcedureHandler {
-	return ProcedureHandler{env: env, pr: pr}
+func NewProceduresHandler(p Pagination, pr database.ProceduresRepository) ProcedureHandler {
+	return ProcedureHandler{p: p, pr: pr}
 }
 
 func (h ProcedureHandler) AddRoutes(rg *echo.Group) {
@@ -25,17 +24,16 @@ func (h ProcedureHandler) AddRoutes(rg *echo.Group) {
 }
 
 func (h ProcedureHandler) All(c echo.Context) error {
-	p := NewPagination(h.env)
-	if err := c.Bind(&p); err != nil {
+	if err := c.Bind(&h.p); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	procedures, err := h.pr.All(p.Limit, p.Offset())
+	procedures, err := h.pr.All(h.p.Limit, h.p.Offset())
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	return c.JSON(http.StatusOK, echo.Map{"status": true, "data": procedures, "meta": p})
+	return c.JSON(http.StatusOK, echo.Map{"status": true, "data": procedures, "meta": h.p})
 }
 
 type createProcedureRequest struct {
@@ -44,7 +42,7 @@ type createProcedureRequest struct {
 	} `json:"procedure" validate:"required"`
 }
 
-func (r createProcedureRequest) Bind(c echo.Context, p *database.Procedure) error {
+func (r *createProcedureRequest) Bind(c echo.Context, p *database.Procedure) error {
 	if err := c.Bind(r); err != nil {
 		return err
 	}
@@ -68,7 +66,7 @@ func (h ProcedureHandler) Create(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
-	if _, err := h.pr.Add(p); err != nil {
+	if _, err := h.pr.Add(p.Title); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 

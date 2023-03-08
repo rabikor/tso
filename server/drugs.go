@@ -42,7 +42,7 @@ type createDrugRequest struct {
 	} `json:"drug" validate:"required"`
 }
 
-func (r createDrugRequest) Bind(c echo.Context, d *database.Drug) error {
+func (r *createDrugRequest) Bind(c echo.Context, d *database.Drug) error {
 	if err := c.Bind(r); err != nil {
 		return err
 	}
@@ -57,10 +57,8 @@ func (r createDrugRequest) Bind(c echo.Context, d *database.Drug) error {
 }
 
 func (h DrugHandler) Create(c echo.Context) error {
-	var (
-		r createDrugRequest
-		d database.Drug
-	)
+	r := createDrugRequest{}
+	d := database.Drug{}
 
 	if err := r.Bind(c, &d); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err)

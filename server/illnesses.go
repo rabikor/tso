@@ -3,19 +3,18 @@ package server
 import (
 	"net/http"
 
-	"treatment-scheme-organizer/config"
 	"treatment-scheme-organizer/database"
 
 	"github.com/labstack/echo/v4"
 )
 
 type IllnessHandler struct {
-	env config.Env
-	ir  database.IllnessesRepository
+	p  Pagination
+	ir database.IllnessesRepository
 }
 
-func NewIllnessesHandler(env config.Env, ir database.IllnessesRepository) IllnessHandler {
-	return IllnessHandler{env: env, ir: ir}
+func NewIllnessesHandler(p Pagination, ir database.IllnessesRepository) IllnessHandler {
+	return IllnessHandler{p: p, ir: ir}
 }
 
 func (h IllnessHandler) AddRoutes(rg *echo.Group) {
@@ -25,17 +24,16 @@ func (h IllnessHandler) AddRoutes(rg *echo.Group) {
 }
 
 func (h IllnessHandler) All(c echo.Context) error {
-	p := NewPagination(h.env)
-	if err := c.Bind(&p); err != nil {
+	if err := c.Bind(&h.p); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	illnesses, err := h.ir.All(p.Limit, p.Offset())
+	illnesses, err := h.ir.All(h.p.Limit, h.p.Offset())
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	return c.JSON(http.StatusOK, echo.Map{"status": true, "data": illnesses, "meta": p})
+	return c.JSON(http.StatusOK, echo.Map{"status": true, "data": illnesses, "meta": h.p})
 }
 
 type createIllnessRequest struct {
@@ -44,7 +42,7 @@ type createIllnessRequest struct {
 	} `json:"illness" validate:"required"`
 }
 
-func (r createIllnessRequest) Bind(c echo.Context, i *database.Illness) error {
+func (r *createIllnessRequest) Bind(c echo.Context, i *database.Illness) error {
 	if err := c.Bind(r); err != nil {
 		return err
 	}
@@ -68,7 +66,7 @@ func (h IllnessHandler) Create(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
-	if _, err := h.ir.Add(i); err != nil {
+	if _, err := h.ir.Add(i.Title); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 

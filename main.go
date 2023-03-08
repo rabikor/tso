@@ -52,19 +52,19 @@ func main() {
 	drugs.AddRoutes(rtr)
 
 	ir := database.NewIllnessesRepository(db)
-	illnesses := server.NewIllnessesHandler(env, ir)
+	illnesses := server.NewIllnessesHandler(p, ir)
 	illnesses.AddRoutes(rtr)
 
 	pr := database.NewProceduresRepository(db)
-	procedures := server.NewProceduresHandler(env, pr)
+	procedures := server.NewProceduresHandler(p, pr)
 	procedures.AddRoutes(rtr)
 
 	sr := database.NewSchemesRepository(db)
-	schemes := server.NewSchemesHandler(env, sr)
+	schemes := server.NewSchemesHandler(p, ir, sr)
 	schemes.AddRoutes(rtr)
 
 	sdr := database.NewSchemeDaysRepository(db)
-	schemeDays := server.NewSchemeDaysHandler(env, sdr)
+	schemeDays := server.NewSchemeDaysHandler(p, dr, pr, sr, sdr)
 	schemeDays.AddRoutes(rtr)
 
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%d", env.Server.Port)))

@@ -10,7 +10,7 @@ type (
 	ProceduresRepository interface {
 		All(limit, offset int) ([]Procedure, error)
 		ByID(id uint) (Procedure, error)
-		Add(p Procedure) (uint, error)
+		Add(title string) (uint, error)
 	}
 	ProceduresTable struct {
 		*sqlx.DB
@@ -34,8 +34,8 @@ func (db ProceduresTable) ByID(id uint) (p Procedure, err error) {
 	return p, db.Get(&p, "SELECT * FROM procedures WHERE id = ?", id)
 }
 
-func (db ProceduresTable) Add(p Procedure) (uint, error) {
-	r, err := db.Exec("INSERT INTO procedures (title) VALUES (?)", p.Title)
+func (db ProceduresTable) Add(t string) (uint, error) {
+	r, err := db.Exec("INSERT INTO procedures (title) VALUES (?)", t)
 	if err != nil {
 		return 0, err
 	}

@@ -8,7 +8,7 @@ type (
 	IllnessesRepository interface {
 		All(limit, offset int) ([]Illness, error)
 		ByID(id uint) (Illness, error)
-		Add(i Illness) (uint, error)
+		Add(title string) (uint, error)
 	}
 	IllnessesTable struct {
 		*sqlx.DB
@@ -32,8 +32,8 @@ func (db IllnessesTable) ByID(id uint) (i Illness, err error) {
 	return i, db.Get(&i, "SELECT * FROM illnesses WHERE id = ?", id)
 }
 
-func (db IllnessesTable) Add(i Illness) (uint, error) {
-	r, err := db.Exec("INSERT INTO illnesses (title) VALUES (?)", i.Title)
+func (db IllnessesTable) Add(t string) (uint, error) {
+	r, err := db.Exec("INSERT INTO illnesses (title) VALUES (?)", t)
 	if err != nil {
 		return 0, err
 	}

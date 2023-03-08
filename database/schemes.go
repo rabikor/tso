@@ -9,7 +9,7 @@ type (
 	SchemesRepository interface {
 		ByID(id uint) (s Scheme, err error)
 		ByIllness(illnessID, limit, offset int) ([]Scheme, error)
-		Add(s Scheme) (uint, error)
+		Add(illnessID, length uint, days []SchemeDay) (uint, error)
 	}
 	SchemesTable struct {
 		*sqlx.DB
@@ -29,7 +29,7 @@ func NewSchemesRepository(db *sqlx.DB) SchemesRepository {
 	return SchemesTable{db}
 }
 
-func (db SchemesTable) ByIllness(illnessID, limit, offset int) (ss []Scheme, _ error) {
+func (db SchemesTable) ByIllness(iID, limit, offset int) (ss []Scheme, _ error) {
 	sql := `
 		SELECT s.*, 
 		       i.id as "illness.id", 
@@ -40,7 +40,7 @@ func (db SchemesTable) ByIllness(illnessID, limit, offset int) (ss []Scheme, _ e
 		WHERE s.illness_id = ?
 		LIMIT ? OFFSET ?`
 
-	return ss, db.Select(&ss, sql, illnessID, limit, offset)
+	return ss, db.Select(&ss, sql, iID, limit, offset)
 }
 
 func (db SchemesTable) ByID(id uint) (s Scheme, err error) {
@@ -55,7 +55,7 @@ func (db SchemesTable) ByID(id uint) (s Scheme, err error) {
 	return s, nil
 }
 
-func (db SchemesTable) Add(s Scheme) (uint, error) {
+func (db SchemesTable) Add(illnessID, length uint, days []SchemeDay) (uint, error) {
 	const q = "INSERT INTO schemes (illness_id, length) VALUES (?, ?)"
 
 	tx, err := db.Begin()
@@ -71,13 +71,13 @@ func (db SchemesTable) Add(s Scheme) (uint, error) {
 		}
 	}()
 
-	r, err := tx.Exec(qCreateSD, s.IllnessID, s.Length)
+	r, err := tx.Exec(qCreateSD, illnessID, length)
 	if err != nil {
 		return 0, err
 	}
 
 	lastID, _ := r.LastInsertId()
-	for _, sd := range s.Days {
+	for _, sd := range days {
 		_, err = tx.Exec(q, lastID, sd.ProcedureID, sd.DrugID, sd.Order, sd.Times, sd.Frequency)
 		if err != nil {
 			return 0, err
