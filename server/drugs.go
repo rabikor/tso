@@ -3,19 +3,18 @@ package server
 import (
 	"net/http"
 
-	"treatment-scheme-organizer/config"
 	"treatment-scheme-organizer/database"
 
 	"github.com/labstack/echo/v4"
 )
 
 type DrugHandler struct {
-	env config.Env
-	db  *database.DB
+	p  Pagination
+	dr database.DrugsRepository
 }
 
-func NewDrugsHandler(env config.Env, db *database.DB) DrugHandler {
-	return DrugHandler{env: env, db: db}
+func NewDrugsHandler(p Pagination, dr database.DrugsRepository) DrugHandler {
+	return DrugHandler{p: p, dr: dr}
 }
 
 func (h DrugHandler) AddRoutes(rg *echo.Group) {
@@ -25,17 +24,16 @@ func (h DrugHandler) AddRoutes(rg *echo.Group) {
 }
 
 func (h DrugHandler) All(c echo.Context) error {
-	p := NewPagination(h.env)
-	if err := c.Bind(&p); err != nil {
+	if err := c.Bind(&h.p); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
-	drugs, err := h.db.Drugs.All(p.Limit, p.Offset())
+	drugs, err := h.dr.All(h.p.Limit, h.p.Offset())
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
-	return c.JSON(http.StatusOK, echo.Map{"status": true, "data": drugs, "meta": p})
+	return c.JSON(http.StatusOK, echo.Map{"status": true, "data": drugs, "meta": h.p})
 }
 
 type createDrugRequest struct {
@@ -44,7 +42,7 @@ type createDrugRequest struct {
 	} `json:"drug" validate:"required"`
 }
 
-func (r createDrugRequest) Bind(c echo.Context, d *database.Drug) error {
+func (r *createDrugRequest) Bind(c echo.Context, d *database.Drug) error {
 	if err := c.Bind(r); err != nil {
 		return err
 	}
@@ -59,16 +57,14 @@ func (r createDrugRequest) Bind(c echo.Context, d *database.Drug) error {
 }
 
 func (h DrugHandler) Create(c echo.Context) error {
-	var (
-		r createDrugRequest
-		d database.Drug
-	)
+	r := createDrugRequest{}
+	d := database.Drug{}
 
 	if err := r.Bind(c, &d); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
-	if _, err := h.db.Drugs.Add(d); err != nil {
+	if _, err := h.dr.Add(r.Drug.Title); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 

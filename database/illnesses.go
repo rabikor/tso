@@ -5,12 +5,12 @@ import (
 )
 
 type (
-	illnessesRepository interface {
+	IllnessesRepository interface {
 		All(limit, offset int) ([]Illness, error)
 		ByID(id uint) (Illness, error)
-		Add(i Illness) (uint, error)
+		Add(title string) (uint, error)
 	}
-	illnessesTable struct {
+	IllnessesTable struct {
 		*sqlx.DB
 	}
 )
@@ -20,16 +20,20 @@ type Illness struct {
 	Title string `db:"title" json:"title"`
 }
 
-func (db illnessesTable) All(limit, offset int) (is []Illness, _ error) {
+func NewIllnessesRepository(db *sqlx.DB) IllnessesRepository {
+	return IllnessesTable{db}
+}
+
+func (db IllnessesTable) All(limit, offset int) (is []Illness, _ error) {
 	return is, db.Select(&is, "SELECT * FROM illnesses LIMIT ? OFFSET ?", limit, offset)
 }
 
-func (db illnessesTable) ByID(id uint) (i Illness, err error) {
+func (db IllnessesTable) ByID(id uint) (i Illness, err error) {
 	return i, db.Get(&i, "SELECT * FROM illnesses WHERE id = ?", id)
 }
 
-func (db illnessesTable) Add(i Illness) (uint, error) {
-	r, err := db.Exec("INSERT INTO illnesses (title) VALUES (?)", i.Title)
+func (db IllnessesTable) Add(t string) (uint, error) {
+	r, err := db.Exec("INSERT INTO illnesses (title) VALUES (?)", t)
 	if err != nil {
 		return 0, err
 	}

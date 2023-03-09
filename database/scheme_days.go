@@ -5,11 +5,11 @@ import (
 )
 
 type (
-	schemeDaysRepository interface {
+	SchemeDaysRepository interface {
 		ByScheme(schemeID, limit, offset int) ([]SchemeDay, error)
-		Add(sd SchemeDay) (uint, error)
+		Add(schemeID, procedureID, drugID, order, times, frequency uint) (uint, error)
 	}
-	schemeDaysTable struct {
+	SchemeDaysTable struct {
 		*sqlx.DB
 	}
 )
@@ -28,7 +28,11 @@ type SchemeDay struct {
 	Scheme    Scheme    `db:"scheme" json:"-"`
 }
 
-func (db schemeDaysTable) ByScheme(schemeID, limit, offset int) (sds []SchemeDay, _ error) {
+func NewSchemeDaysRepository(db *sqlx.DB) SchemeDaysRepository {
+	return SchemeDaysTable{db}
+}
+
+func (db SchemeDaysTable) ByScheme(sID, limit, offset int) (sds []SchemeDay, _ error) {
 	const q = `SELECT sd.*, 
 		       d.id as "drug.id", 
 		       d.title as "drug.title",
@@ -41,23 +45,20 @@ func (db schemeDaysTable) ByScheme(schemeID, limit, offset int) (sds []SchemeDay
 		WHERE sd.scheme_id = ? 
 		LIMIT ? OFFSET ?`
 
-	return sds, db.Select(&sds, q, schemeID, limit, offset)
+	return sds, db.Select(&sds, q, sID, limit, offset)
 }
 
-// Add creates a new scheme day in the table.
-// Do not use integrated relational fields to pass the arguments.
-// For example, use SchemeID instead od Scheme.ID to pass the actual scheme ID.
-func (db schemeDaysTable) Add(sd SchemeDay) (uint, error) {
-	const q = "INSERT INTO scheme_days (scheme_id, procedure_id, drug_id, `order`, times, frequency) VALUES (?, ?, ?, ?, ?, ?)"
+const qCreateSD = "INSERT INTO scheme_days (scheme_id, procedure_id, drug_id, `order`, times, frequency) VALUES (?, ?, ?, ?, ?, ?)"
 
+func (db SchemeDaysTable) Add(sID, pID, dID, order, times, frequency uint) (uint, error) {
 	r, err := db.Exec(
-		q,
-		sd.SchemeID,
-		sd.ProcedureID,
-		sd.DrugID,
-		sd.Order,
-		sd.Times,
-		sd.Frequency,
+		qCreateSD,
+		sID,
+		pID,
+		dID,
+		order,
+		times,
+		frequency,
 	)
 	if err != nil {
 		return 0, err

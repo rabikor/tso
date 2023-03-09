@@ -4,19 +4,19 @@ import (
 	"net/http"
 	"strconv"
 
-	"treatment-scheme-organizer/config"
 	"treatment-scheme-organizer/database"
 
 	"github.com/labstack/echo/v4"
 )
 
 type SchemeHandler struct {
-	env config.Env
-	db  *database.DB
+	p  Pagination
+	ir database.IllnessesRepository
+	sr database.SchemesRepository
 }
 
-func NewSchemesHandler(env config.Env, db *database.DB) SchemeHandler {
-	return SchemeHandler{env: env, db: db}
+func NewSchemesHandler(p Pagination, ir database.IllnessesRepository, sr database.SchemesRepository) SchemeHandler {
+	return SchemeHandler{p: p, ir: ir, sr: sr}
 }
 
 func (h SchemeHandler) AddRoutes(rtr *echo.Group) {
@@ -28,20 +28,18 @@ func (h SchemeHandler) AddRoutes(rtr *echo.Group) {
 }
 
 func (h SchemeHandler) ByIllness(c echo.Context) error {
-	p := NewPagination(h.env)
-
-	if err := c.Bind(&p); err != nil {
+	if err := c.Bind(&h.p); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
 	illnessID, _ := strconv.Atoi(c.Param("illnessID"))
 
-	schemes, err := h.db.Schemes.ByIllness(illnessID, p.Limit, p.Offset())
+	schemes, err := h.sr.ByIllness(illnessID, h.p.Limit, h.p.Offset())
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	return c.JSON(http.StatusOK, echo.Map{"status": true, "data": schemes, "meta": p})
+	return c.JSON(http.StatusOK, echo.Map{"status": true, "data": schemes, "meta": h.p})
 }
 
 type createSchemeRequest struct {
@@ -52,7 +50,7 @@ type createSchemeRequest struct {
 	Days []SchemeDayData `json:"days" validate:"dive,required"`
 }
 
-func (r createSchemeRequest) Bind(c echo.Context, s *database.Scheme) error {
+func (r *createSchemeRequest) Bind(c echo.Context, s *database.Scheme) error {
 	if err := c.Bind(r); err != nil {
 		return err
 	}
@@ -63,13 +61,12 @@ func (r createSchemeRequest) Bind(c echo.Context, s *database.Scheme) error {
 
 	s.IllnessID = r.Scheme.IllnessID
 	s.Length = r.Scheme.Length
+	s.Days = []database.SchemeDay{}
 
 	for _, sd := range r.Days {
 		s.Days = append(
 			s.Days,
 			database.SchemeDay{
-				Scheme:      *s,
-				SchemeID:    s.ID,
 				ProcedureID: sd.ProcedureID,
 				DrugID:      sd.DrugID,
 				Order:       sd.Order,
@@ -98,12 +95,12 @@ func (h SchemeHandler) Create(c echo.Context) error {
 		}
 	}
 
-	_, err := h.db.Illnesses.ByID(r.Scheme.IllnessID)
+	_, err := h.ir.ByID(r.Scheme.IllnessID)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
-	if _, err := h.db.Schemes.Add(s); err != nil {
+	if _, err := h.sr.Add(s.IllnessID, s.Length, s.Days); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 

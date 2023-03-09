@@ -6,14 +6,13 @@ import (
 )
 
 type (
-	schemesRepository interface {
+	SchemesRepository interface {
 		ByID(id uint) (s Scheme, err error)
 		ByIllness(illnessID, limit, offset int) ([]Scheme, error)
-		Add(s Scheme) (uint, error)
+		Add(illnessID, length uint, days []SchemeDay) (uint, error)
 	}
-	schemesTable struct {
+	SchemesTable struct {
 		*sqlx.DB
-		sdTable schemeDaysTable
 	}
 )
 
@@ -26,7 +25,11 @@ type Scheme struct {
 	Days    []SchemeDay `db:"days" json:"-"`
 }
 
-func (db schemesTable) ByIllness(illnessID, limit, offset int) (ss []Scheme, _ error) {
+func NewSchemesRepository(db *sqlx.DB) SchemesRepository {
+	return SchemesTable{db}
+}
+
+func (db SchemesTable) ByIllness(iID, limit, offset int) (ss []Scheme, _ error) {
 	sql := `
 		SELECT s.*, 
 		       i.id as "illness.id", 
@@ -37,10 +40,10 @@ func (db schemesTable) ByIllness(illnessID, limit, offset int) (ss []Scheme, _ e
 		WHERE s.illness_id = ?
 		LIMIT ? OFFSET ?`
 
-	return ss, db.Select(&ss, sql, illnessID, limit, offset)
+	return ss, db.Select(&ss, sql, iID, limit, offset)
 }
 
-func (db schemesTable) ByID(id uint) (s Scheme, err error) {
+func (db SchemesTable) ByID(id uint) (s Scheme, err error) {
 	if err = db.Get(&s, "SELECT * FROM schemes WHERE id = ?", id); err != nil {
 		return s, err
 	}
@@ -52,11 +55,8 @@ func (db schemesTable) ByID(id uint) (s Scheme, err error) {
 	return s, nil
 }
 
-func (db schemesTable) Add(s Scheme) (uint, error) {
-	const (
-		qScheme = "INSERT INTO schemes (illness_id, length) VALUES (?, ?)"
-		qDays   = "INSERT INTO scheme_days (scheme_id, procedure_id, drug_id, `order`, times, frequency) VALUES (?, ?, ?, ?, ?, ?)"
-	)
+func (db SchemesTable) Add(illnessID, length uint, days []SchemeDay) (uint, error) {
+	const q = "INSERT INTO schemes (illness_id, length) VALUES (?, ?)"
 
 	tx, err := db.Begin()
 	if err != nil {
@@ -71,14 +71,14 @@ func (db schemesTable) Add(s Scheme) (uint, error) {
 		}
 	}()
 
-	r, err := tx.Exec(qScheme, s.IllnessID, s.Length)
+	r, err := tx.Exec(qCreateSD, illnessID, length)
 	if err != nil {
 		return 0, err
 	}
 
 	lastID, _ := r.LastInsertId()
-	for _, sd := range s.Days {
-		_, err = tx.Exec(qDays, lastID, sd.ProcedureID, sd.DrugID, sd.Order, sd.Times, sd.Frequency)
+	for _, sd := range days {
+		_, err = tx.Exec(q, lastID, sd.ProcedureID, sd.DrugID, sd.Order, sd.Times, sd.Frequency)
 		if err != nil {
 			return 0, err
 		}
